@@ -1,0 +1,10 @@
+
+*.pubxml
+
+*.user
+
+*.mdf
+
+*.PublishSettings
+
+.vs/

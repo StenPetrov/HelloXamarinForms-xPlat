@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<p:ListDataPage xmlns="http://xamarin.com/schemas/2014/forms" 
+		xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+		xmlns:p="clr-namespace:Xamarin.Forms.Pages;assembly=Xamarin.Forms.Pages"
+		xmlns:azure="clr-namespace:Xamarin.Forms.Pages.Azure;assembly=Xamarin.Forms.Pages.Azure" 
+		xmlns:local="clr-namespace:HelloForms" x:Class="HelloForms.EasyTablesPage" 
+		Title="Workshop Sessions" Padding="0,20,0,0">
+	<p:DataPage.DataSource>
+		<azure:AzureDataSource>
+			<azure:AzureDataSource.Source>
+				<azure:AzureEasyTableSource Uri="http://xamarinworkshopeasytables.azurewebsites.net/" 
+					TableName="WorkshopSessions" />
+			</azure:AzureDataSource.Source>
+		</azure:AzureDataSource>
+	</p:DataPage.DataSource>
+	
+	<p:DataPage.DefaultItemTemplate>
+		<DataTemplate>
+			<TextCell Text="{Binding  Value[sessionFocus]}" Detail="{Binding Value[createdAt]}" />
+		</DataTemplate>
+	</p:DataPage.DefaultItemTemplate>
+	
+	<p:ListDataPage.DetailTemplate>
+		<DataTemplate>
+			<local:EasyTablesDetailsPage Title="Event Details" DataSource="{Binding Value}"> 
+				<Label Text="{Binding .}"/>
+			</local:EasyTablesDetailsPage>
+		</DataTemplate>
+	</p:ListDataPage.DetailTemplate>
+	
+	<p:DataPage.Style>
+		<Style TargetType="p:DataPage">
+			<Setter Property="ControlTemplate">
+				<ControlTemplate>
+					<p:ListDataPageControl />
+				</ControlTemplate>
+			</Setter>
+		</Style>
+	</p:DataPage.Style>
+</p:ListDataPage>
