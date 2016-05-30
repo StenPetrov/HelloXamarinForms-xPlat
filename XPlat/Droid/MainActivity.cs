@@ -20,9 +20,14 @@ namespace HelloForms.Droid
 
             base.OnCreate (bundle);
 
-            Microsoft.WindowsAzure.MobileServices.CurrentPlatform.Init (); 
+            Microsoft.WindowsAzure.MobileServices.CurrentPlatform.Init ();
 
             global::Xamarin.Forms.Forms.Init (this, bundle);
+
+            XLabs.Ioc.Resolver.SetResolver (
+                new XLabs.Ioc.SimpleContainer ()
+                .Register<XLabs.Platform.Services.Media.IMediaPicker, XLabs.Platform.Services.Media.MediaPicker> ()
+                .GetResolver ());
 
             LoadApplication (new App ());
         }

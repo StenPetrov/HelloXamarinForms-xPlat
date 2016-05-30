@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="HelloForms.FacePage">
+	<ContentPage.Content>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="auto" />
+				<RowDefinition Height="*" />
+				<RowDefinition Height="auto" />
+			</Grid.RowDefinitions>
+			<!-- top bar, auto-hides -->
+			<Grid Grid.Row="0" RowSpacing="10" BackgroundColor="#10101010" IsVisible="{Binding IsCurrentPhotoAnalyzed}" Padding="20">
+				<Label Grid.Row="0" Text="{Binding Age, StringFormat='Age: {0:N}'}" />
+                <Label Grid.Row="1" Text="{Binding Gender}" />
+			</Grid>
+			<!-- image, auto-hides -->
+			<Image Grid.Row="1" IsVisible="{Binding IsPhotoAvailable}" Source="{Binding ImageSource}" />
+			<!-- command bar -->
+			<Grid Grid.Row="2">
+				<Button Grid.Column="0" Text="Select Photo" Command="{Binding PickPhotoCommand}" />
+				<Button Grid.Column="1" Text="Take Photo" Command="{Binding TakePhotoCommand}" />
+				<Button Grid.Column="2" Text="Analyze" Command="{Binding AnalyzePhotoCommand}" />
+			</Grid>
+		</Grid>
+	</ContentPage.Content>
+</ContentPage>

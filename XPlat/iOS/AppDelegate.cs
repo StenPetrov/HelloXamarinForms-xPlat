@@ -24,7 +24,12 @@ namespace HelloForms.iOS
 #if ENABLE_TEST_CLOUD
             Xamarin.Calabash.Start();
 #endif
-             
+ 
+            XLabs.Ioc.Resolver.SetResolver (
+                new XLabs.Ioc.SimpleContainer ()
+                .Register<XLabs.Platform.Services.Media.IMediaPicker,XLabs.Platform.Services.Media.MediaPicker>()
+                .GetResolver ());
+
             LoadApplication (new App ());
 
             return base.FinishedLaunching (app, options);

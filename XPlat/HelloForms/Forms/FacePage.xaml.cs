@@ -5,10 +5,10 @@ using Xamarin.Forms;
 
 namespace HelloForms
 {
-    public partial class HelloPage : ContentPage
+    public partial class FacePage : ContentPage
     {
-        public HelloPage ()
-        { 
+        public FacePage ()
+        {
             InitializeComponent ();
         }
     }

@@ -10,3 +10,5 @@
 .vs/
 bin/
 obj/
+
+*.private.*

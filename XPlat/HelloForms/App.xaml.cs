@@ -9,10 +9,9 @@ namespace HelloForms
     public partial class App : Application
     {
         public App ()
-        {
-            ViewFactory.Register<HelloPage, HelloViewModel> ();
-            // MainPage = new NavigationPage (ViewFactory.CreatePage (typeof (HelloViewModel)));
-            MainPage = new EasyTablesPage ();
+        { 
+            ViewFactory.Register<FacePage, FaceViewModel> ();
+            MainPage = (Page)ViewFactory.CreatePage (typeof (FaceViewModel));
         }
 
         protected override void OnStart ()
