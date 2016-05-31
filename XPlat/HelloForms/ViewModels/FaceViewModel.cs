@@ -18,25 +18,18 @@ namespace HelloForms
         // private string ProjectOxfordFaceApiKey = "<your key here>";
         // private string ProjectOxfordEmotionApiKey = "<your key here>";
 
-        private Stream _currentPhotoStream;
-        public Stream CurrentPhotoStream {
-            get { return _currentPhotoStream; }
+        private byte [] _currentPhotoBuffer;
+        public byte [] CurrentPhotoBuffer {
+            get { return _currentPhotoBuffer; }
             set {
                 // hide the photo in case something fails it will remain hidden
                 IsPhotoAvailable = false;
-
-                if (_currentPhotoStream != value) {
-                    // try our best to dispose of images
-                    if (_currentPhotoStream != null) _currentPhotoStream.Dispose ();
+                if (_currentPhotoBuffer != value) {
+                    SetProperty (ref _currentPhotoBuffer, value);
 
                     IsCurrentPhotoAnalyzed = false;
-                    SetProperty (ref _currentPhotoStream, value);
                     if (value != null) {
-                        var isStreamCopy = new MemoryStream ((int)value.Length);
-                        value.CopyTo (isStreamCopy);
-                        isStreamCopy.Seek (0, SeekOrigin.Begin);
-                        value.Seek (0, SeekOrigin.Begin);
-                        ImageSource = ImageSource.FromStream (() => isStreamCopy);
+                        ImageSource = ImageSource.FromStream (GetCurrentPhotoStream);
                         IsPhotoAvailable = true;
                     } else {
                         ImageSource = null;
@@ -121,6 +114,11 @@ namespace HelloForms
             ((Command)PickPhotoCommand)?.ChangeCanExecute ();
             ((Command)AnalyzePhotoCommand)?.ChangeCanExecute ();
         }
+ 
+        public Stream GetCurrentPhotoStream ()
+        {
+            return new MemoryStream (_currentPhotoBuffer);
+        }
 
         public async Task DoAnalyzePhoto ()
         {
@@ -132,9 +130,8 @@ namespace HelloForms
                 UpdateCommands ();
 
                 StatusMessage = "Looking for a face...";
-                // reset the stream so it can be re-read
-                CurrentPhotoStream.Seek (0, SeekOrigin.Begin);
-                var faces = await faceClient.DetectAsync (CurrentPhotoStream, true, false,
+                // reset the stream so it can be re-read 
+                var faces = await faceClient.DetectAsync (GetCurrentPhotoStream(), true, false,
                     new []{
                         Microsoft.ProjectOxford.Face.FaceAttributeType.Age,
                         Microsoft.ProjectOxford.Face.FaceAttributeType.Gender,
@@ -147,8 +144,6 @@ namespace HelloForms
                     Gender = faces [0].FaceAttributes.Gender;
                     IsCurrentPhotoAnalyzed = true;
 
-                    CurrentPhotoStream.Seek (0, SeekOrigin.Begin);
-
                     // this is an example of bad API design
                     var faceCRect = new Microsoft.ProjectOxford.Common.Rectangle {
                         Top = faces [0].FaceRectangle.Top,
@@ -159,7 +154,7 @@ namespace HelloForms
 
                     StatusMessage = "Analyzing emotion...";
                     Emotion = "...";
-                    var emotionResults = await emotionClient.RecognizeAsync (CurrentPhotoStream, new [] { faceCRect });
+                    var emotionResults = await emotionClient.RecognizeAsync (GetCurrentPhotoStream (), new [] { faceCRect });
                     if (emotionResults != null && emotionResults.Length > 0 && emotionResults [0] != null) {
                         Emotion = string.Join (", ", emotionResults [0].Scores.ToRankedList ()
                                                     .Where (e => e.Value > 0.75)
@@ -204,11 +199,10 @@ namespace HelloForms
                     mediaFile = await _mediaPicker.SelectPhotoAsync (cameraOptions);
                 }
                 if (mediaFile != null && mediaFile.Source != null) {
-                    // move the image stream to our own
-                    MemoryStream copyImage = new MemoryStream ((int)mediaFile.Source.Length);
-                    mediaFile.Source.CopyTo (copyImage);
-                    copyImage.Seek (0, SeekOrigin.Begin);
-                    CurrentPhotoStream = copyImage;
+                    // move the image stream to our own buffer
+                    byte [] buffer = new byte [(int)mediaFile.Source.Length];
+                    mediaFile.Source.Read (buffer, 0, buffer.Length);
+                    CurrentPhotoBuffer = buffer;
                     StatusMessage = "Photo " + (isNewPhoto ? "taken" : "selected");
                 } else {
                     StatusMessage = "No photo";
