@@ -158,24 +158,17 @@ namespace HelloForms
                     };
 
                     StatusMessage = "Analyzing emotion...";
+                    Emotion = "...";
                     var emotionResults = await emotionClient.RecognizeAsync (CurrentPhotoStream, new [] { faceCRect });
                     if (emotionResults != null && emotionResults.Length > 0 && emotionResults [0] != null) {
-                        List<Tuple<string, float>> emotions = new List<Tuple<string, float>> (
-                            new []{
-                                new Tuple<string,float>("Anger",emotionResults[0].Scores.Anger),
-                                new Tuple<string,float>("Contempt",emotionResults[0].Scores.Contempt),
-                                new Tuple<string,float>("Disgust",emotionResults[0].Scores.Disgust),
-                                new Tuple<string,float>("Fear",emotionResults[0].Scores.Fear),
-                                new Tuple<string,float>("Happiness",emotionResults[0].Scores.Happiness),
-                                new Tuple<string,float>("Neutral",emotionResults[0].Scores.Neutral),
-                                new Tuple<string,float>("Sadness",emotionResults[0].Scores.Sadness),
-                                new Tuple<string,float>("Surprise",emotionResults[0].Scores.Surprise),
-                            });
-                        this.Emotion = string.Join (", ",
-                                                    emotions
-                                                        .Where (e => e.Item2 > 0.75)
-                                                        .OrderByDescending (e => e.Item2)
-                                                    .Select (e => e.Item1 + " (" + e.Item2.ToString ("F2") + ")"));
+                        Emotion = string.Join (", ", emotionResults [0].Scores.ToRankedList ()
+                                                    .Where (e => e.Value > 0.75)
+                                                    .OrderByDescending (e => e.Value)
+                                                    .Take (2)
+                                                    .Select (e => e.Key + " (" + e.Value.ToString ("F2") + ")"));
+                        if (string.IsNullOrWhiteSpace (Emotion))
+                            Emotion = "Not recognized";
+
                         StatusMessage = "Ready.";
                     }
                 }
