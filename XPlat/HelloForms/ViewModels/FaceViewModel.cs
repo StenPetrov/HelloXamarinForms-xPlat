@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using XamarinAzureMobileAppTestService.DataObjects;
 using Xamarin.Forms;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Collections.Generic;
 using XLabs.Forms.Mvvm;
 using System.Windows.Input;
 using System.IO;
@@ -12,8 +14,9 @@ namespace HelloForms
 {
     public partial class FaceViewModel : ViewModel
     {
+        // See https://www.microsoft.com/cognitive-services/en-us/subscriptions
         // private string ProjectOxfordFaceApiKey = "<your key here>";
-
+        // private string ProjectOxfordEmotionApiKey = "<your key here>";
 
         private Stream _currentPhotoStream;
         public Stream CurrentPhotoStream {
@@ -75,7 +78,17 @@ namespace HelloForms
         }
         private string _Gender = default (string);
 
+        public string Emotion {
+            get { return _Emotion; }
+            set { SetProperty (ref _Emotion, value); }
+        }
+        private string _Emotion = default (string);
 
+        public string StatusMessage {
+            get { return _StatusMessage; }
+            set { SetProperty (ref _StatusMessage, value); }
+        }
+        private string _StatusMessage = default (string);
 
         public ICommand TakePhotoCommand { get; set; }
 
@@ -85,6 +98,7 @@ namespace HelloForms
 
         private IMediaPicker _mediaPicker;
         private Microsoft.ProjectOxford.Face.FaceServiceClient faceClient;
+        private Microsoft.ProjectOxford.Emotion.EmotionServiceClient emotionClient;
 
         public FaceViewModel () : base ()
         {
@@ -96,6 +110,7 @@ namespace HelloForms
                                      (_) => _mediaPicker.IsPhotosSupported);
 
             faceClient = new Microsoft.ProjectOxford.Face.FaceServiceClient (ProjectOxfordFaceApiKey);
+            emotionClient = new Microsoft.ProjectOxford.Emotion.EmotionServiceClient (ProjectOxfordEmotionApiKey);
 
             AnalyzePhotoCommand = new Command (async (_) => await DoAnalyzePhoto (), (_) => IsPhotoAvailable);
         }
@@ -113,20 +128,59 @@ namespace HelloForms
             IsBusy = true;
 
             try {
+
                 UpdateCommands ();
 
+                StatusMessage = "Looking for a face...";
                 // reset the stream so it can be re-read
                 CurrentPhotoStream.Seek (0, SeekOrigin.Begin);
-                var faces = await faceClient.DetectAsync (CurrentPhotoStream, true, true, true, false);
+                var faces = await faceClient.DetectAsync (CurrentPhotoStream, true, false,
+                    new []{
+                        Microsoft.ProjectOxford.Face.FaceAttributeType.Age,
+                        Microsoft.ProjectOxford.Face.FaceAttributeType.Gender,
+                    });
 
                 // do our best to avoid exceptions
-                if (faces != null && faces.Length == 1 && faces [0].Attributes != null) {
-                    Age = (int)faces [0].Attributes.Age;
-                    Gender = faces [0].Attributes.Gender;
+                if (faces != null && faces.Length == 1 && faces [0].FaceAttributes != null) {
 
+                    Age = (int)faces [0].FaceAttributes.Age;
+                    Gender = faces [0].FaceAttributes.Gender;
                     IsCurrentPhotoAnalyzed = true;
+
+                    CurrentPhotoStream.Seek (0, SeekOrigin.Begin);
+
+                    // this is an example of bad API design
+                    var faceCRect = new Microsoft.ProjectOxford.Common.Rectangle {
+                        Top = faces [0].FaceRectangle.Top,
+                        Left = faces [0].FaceRectangle.Left,
+                        Width = faces [0].FaceRectangle.Width,
+                        Height = faces [0].FaceRectangle.Height,
+                    };
+
+                    StatusMessage = "Analyzing emotion...";
+                    var emotionResults = await emotionClient.RecognizeAsync (CurrentPhotoStream, new [] { faceCRect });
+                    if (emotionResults != null && emotionResults.Length > 0 && emotionResults [0] != null) {
+                        List<Tuple<string, float>> emotions = new List<Tuple<string, float>> (
+                            new []{
+                                new Tuple<string,float>("Anger",emotionResults[0].Scores.Anger),
+                                new Tuple<string,float>("Contempt",emotionResults[0].Scores.Contempt),
+                                new Tuple<string,float>("Disgust",emotionResults[0].Scores.Disgust),
+                                new Tuple<string,float>("Fear",emotionResults[0].Scores.Fear),
+                                new Tuple<string,float>("Happiness",emotionResults[0].Scores.Happiness),
+                                new Tuple<string,float>("Neutral",emotionResults[0].Scores.Neutral),
+                                new Tuple<string,float>("Sadness",emotionResults[0].Scores.Sadness),
+                                new Tuple<string,float>("Surprise",emotionResults[0].Scores.Surprise),
+                            });
+                        this.Emotion = string.Join (", ",
+                                                    emotions
+                                                        .Where (e => e.Item2 > 0.75)
+                                                        .OrderByDescending (e => e.Item2)
+                                                    .Select (e => e.Item1 + " (" + e.Item2.ToString ("F2") + ")"));
+                        StatusMessage = "Ready.";
+                    }
                 }
             } catch (Exception x) {
+                StatusMessage = "Error: " + x.Message;
                 System.Diagnostics.Debug.WriteLine ("Error while analyzing a photo: " + x);
             } finally {
                 IsBusy = false;
@@ -149,21 +203,29 @@ namespace HelloForms
 
                 UpdateCommands ();
 
-                if (isNewPhoto)
+                if (isNewPhoto) {
+                    StatusMessage = "Taking a photo";
                     mediaFile = await _mediaPicker.TakePhotoAsync (cameraOptions);
-                else
+                } else {
+                    StatusMessage = "Picking a photo";
                     mediaFile = await _mediaPicker.SelectPhotoAsync (cameraOptions);
-
+                }
                 if (mediaFile != null && mediaFile.Source != null) {
                     // move the image stream to our own
                     MemoryStream copyImage = new MemoryStream ((int)mediaFile.Source.Length);
                     mediaFile.Source.CopyTo (copyImage);
                     copyImage.Seek (0, SeekOrigin.Begin);
                     CurrentPhotoStream = copyImage;
+                    StatusMessage = "Photo " + (isNewPhoto ? "taken" : "selected");
+                } else {
+                    StatusMessage = "No photo";
                 }
+
             } catch (TaskCanceledException) {
                 // ignored, this is thrown when user clicks "Cancel"
+                StatusMessage = "Cancelled";
             } catch (Exception x) {
+                StatusMessage = "Error: " + x.Message;
                 // always output exceptions unless well known
                 System.Diagnostics.Debug.WriteLine ($"Error in DoTakePhoto({isNewPhoto}): {x}");
             } finally {

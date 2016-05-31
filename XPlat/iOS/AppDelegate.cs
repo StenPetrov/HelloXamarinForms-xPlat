@@ -11,10 +11,7 @@ namespace HelloForms.iOS
     public partial class AppDelegate : global::Xamarin.Forms.Platform.iOS.FormsApplicationDelegate
     {
         public override bool FinishedLaunching (UIApplication app, NSDictionary options)
-        {
-            var x = typeof (Xamarin.Forms.Pages.DataPage);
-            x = typeof (Xamarin.Forms.Pages.Azure.AzureSource);
-
+        { 
             Microsoft.WindowsAzure.MobileServices.CurrentPlatform.Init ();
             SQLitePCL.CurrentPlatform.Init ();
 
